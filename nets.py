@@ -67,9 +67,3 @@ class Unet:
         self.params = get_all_params(self.net.output, trainable=True)
 
         self.generate = theano.function([self.input_var], self.out_var, allow_input_downcast=True)
-
-
-class Discriminator:
-    def __init__(self, generator):
-        class net:
-            input_l = InputLayer(generator.net.input_l)

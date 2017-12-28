@@ -5,7 +5,9 @@ from lasagne.nonlinearities import LeakyRectify
 
 
 class InstanceNorm(Layer):
-    def __init__(self, epsilon, **kwargs):
+    def __init__(self, incoming, epsilon=1e-5, **kwargs):
+        super(InstanceNorm, self).__init__(incoming, **kwargs)
+
         self.epsilon = epsilon
 
     def get_output_for(self, input, **kwargs):
@@ -13,6 +15,9 @@ class InstanceNorm(Layer):
         var = T.var(input, axis=[2, 3])
 
         return (input - mean) / T.sqrt(var + self.epsilon)
+
+    def get_output_shape_for(self, input_shape):
+        return input_shape
 
 
 def ResidualBlock(input, filter_size):
