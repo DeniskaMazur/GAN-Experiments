@@ -11,10 +11,10 @@ class InstanceNorm(Layer):
         self.epsilon = epsilon
 
     def get_output_for(self, input, **kwargs):
-        mean = T.mean(input, axis=-1)
-        var = T.var(input, axis=-1)
+        mean = T.mean(input, axis=[2, 3])
+        var = T.var(input, axis=[2, 3])
 
-        return (input - mean) / T.sqrt(var + self.epsilon)
+        return (input - mean)# / T.sqrt(var + self.epsilon)
 
     def get_output_shape_for(self, input_shape):
         return input_shape
