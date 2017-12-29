@@ -1,69 +1,100 @@
-from lasagne.layers import (InputLayer, ConcatLayer, Pool2DLayer, ReshapeLayer, DimshuffleLayer, NonlinearityLayer,
-                            DropoutLayer, Deconv2DLayer, batch_norm, get_output, get_all_params)
+from lasagne.layers import *
+from lasagne.nonlinearities import LeakyRectify
 
-from lasagne.layers import Conv2DLayer as ConvLayer
+from layers import *
 
-import lasagne
-from lasagne.init import HeNormal
+from collections import OrderedDict
 
 import theano
+import theano.tensor as T
 
 
-class Unet:
-    def __init__(self, pad='same', nonlinearity=lasagne.nonlinearities.elu, input_dim=(128, 128), base_n_filters=64, do_dropout=False):
-        class net:
-            input_l = InputLayer((None, 3, input_dim[0], input_dim[1]))
+class Generator:
+    def __init__(self, n_chan=3, filter_size=(128, 128)):
+        self.n_chan = 3
+        self.filter_size = filter_size
 
-            contr_1_1 = batch_norm(ConvLayer(input_l, base_n_filters, 3, nonlinearity=nonlinearity, pad=pad, W=HeNormal(gain="relu")))
-            contr_1_2 = batch_norm(ConvLayer(contr_1_1, base_n_filters, 3, nonlinearity=nonlinearity, pad=pad, W=HeNormal(gain="relu")))
-            pool1 = Pool2DLayer(contr_1_2, 2)
+        self.layers = self._build_network()
 
-            contr_2_1 = batch_norm(ConvLayer(pool1, base_n_filters*2, 3, nonlinearity=nonlinearity, pad=pad, W=HeNormal(gain="relu")))
-            contr_2_2 = batch_norm(ConvLayer(contr_2_1, base_n_filters*2, 3, nonlinearity=nonlinearity, pad=pad, W=HeNormal(gain="relu")))
-            pool2 = Pool2DLayer(contr_2_2, 2)
+        self.inp_var = self.layers["inp"].input_var
+        self.output_var = get_output(self.layers["out"])
+        self.params = get_all_params(self.layers["out"], trainable=True)
 
-            contr_3_1 = batch_norm(ConvLayer(pool2, base_n_filters*4, 3, nonlinearity=nonlinearity, pad=pad, W=HeNormal(gain="relu")))
-            contr_3_2 = batch_norm(ConvLayer(contr_3_1, base_n_filters*4, 3, nonlinearity=nonlinearity, pad=pad, W=HeNormal(gain="relu")))
-            pool3 = Pool2DLayer(contr_3_2, 2)
+        self.generate = theano.function([self.inp_var],
+                                        self.output_var,
+                                        allow_input_downcast=True)
 
-            contr_4_1 = batch_norm(ConvLayer(pool3, base_n_filters*8, 3, nonlinearity=nonlinearity, pad=pad, W=HeNormal(gain="relu")))
-            contr_4_2 = batch_norm(ConvLayer(contr_4_1, base_n_filters*8, 3, nonlinearity=nonlinearity, pad=pad, W=HeNormal(gain="relu")))
-            l = pool4 = Pool2DLayer(contr_4_2, 2)
+    def _build_network(self):
+        net = OrderedDict()
 
-            # the paper does not really describe where and how dropout is added. Feel free to try more options
-            if do_dropout:
-                l = DropoutLayer(l, p=0.4)
+        net["inp"] = InputLayer(tuple([None, self.n_chan]) + self.filter_size)
 
-            encode_1 = batch_norm(ConvLayer(l, base_n_filters*16, 3, nonlinearity=nonlinearity, pad=pad, W=HeNormal(gain="relu")))
-            encode_2 = batch_norm(ConvLayer(encode_1, base_n_filters*16, 3, nonlinearity=nonlinearity, pad=pad, W=HeNormal(gain="relu")))
-            upscale1 = batch_norm(Deconv2DLayer(encode_2, base_n_filters*16, 2, 2, crop="valid", nonlinearity=nonlinearity, W=HeNormal(gain="relu")))
+        net["conv1"] = Conv2DLayer(net["inp"], 32, 7, nonlinearity=LeakyRectify(0.2))
 
-            concat1 = ConcatLayer([upscale1, contr_4_2], cropping=(None, None, "center", "center"))
-            expand_1_1 = batch_norm(ConvLayer(concat1, base_n_filters*8, 3, nonlinearity=nonlinearity, pad=pad, W=HeNormal(gain="relu")))
-            expand_1_2 = batch_norm(ConvLayer(expand_1_1, base_n_filters*8, 3, nonlinearity=nonlinearity, pad=pad, W=HeNormal(gain="relu")))
-            upscale2 = batch_norm(Deconv2DLayer(expand_1_2, base_n_filters*8, 2, 2, crop="valid", nonlinearity=nonlinearity, W=HeNormal(gain="relu")))
+        net["conv2"] = Conv2DLayer(net["conv1"], 64, 5, stride=2, pad="same", nonlinearity=None)
+        net["norm1"] = InstanceNorm(net["conv2"])
+        net["lref1"] = NonlinearityLayer(net["norm1"], nonlinearity=LeakyRectify(0.2))
 
-            concat2 = ConcatLayer([upscale2, contr_3_2], cropping=(None, None, "center", "center"))
-            expand_2_1 = batch_norm(ConvLayer(concat2, base_n_filters*4, 3, nonlinearity=nonlinearity, pad=pad, W=HeNormal(gain="relu")))
-            expand_2_2 = batch_norm(ConvLayer(expand_2_1, base_n_filters*4, 3, nonlinearity=nonlinearity, pad=pad, W=HeNormal(gain="relu")))
-            upscale3 = batch_norm(Deconv2DLayer(expand_2_2, base_n_filters*4, 2, 2, crop="valid", nonlinearity=nonlinearity, W=HeNormal(gain="relu")))
+        net["conv3"] = Conv2DLayer(net["lref1"], 64, 5, stride=2, pad="same", nonlinearity=None)
+        net["norm2"] = InstanceNorm(net["conv3"])
+        net["lref2"] = NonlinearityLayer(net["norm2"], nonlinearity=LeakyRectify(0.2))
 
-            concat3 = ConcatLayer([upscale3, contr_2_2], cropping=(None, None, "center", "center"))
-            expand_3_1 = batch_norm(ConvLayer(concat3, base_n_filters*2, 3, nonlinearity=nonlinearity, pad=pad, W=HeNormal(gain="relu")))
-            expand_3_2 = batch_norm(ConvLayer(expand_3_1, base_n_filters*2, 3, nonlinearity=nonlinearity, pad=pad, W=HeNormal(gain="relu")))
-            upscale4 = batch_norm(Deconv2DLayer(expand_3_2, base_n_filters*2, 2, 2, crop="valid", nonlinearity=nonlinearity, W=HeNormal(gain="relu")))
+        net["resid1"] = ResidualBlock(net["lref2"], 3)
+        for i in range(8):
+            net["resid%d" % (i+2)] = ResidualBlock(net["resid%d" % (i+1)], 3)
 
-            concat4 = ConcatLayer([upscale4, contr_1_2], cropping=(None, None, "center", "center"))
-            expand_4_1 = batch_norm(ConvLayer(concat4, base_n_filters, 3, nonlinearity=nonlinearity, pad=pad, W=HeNormal(gain="relu")))
-            expand_4_2 = batch_norm(ConvLayer(expand_4_1, base_n_filters, 3, nonlinearity=nonlinearity, pad=pad, W=HeNormal(gain="relu")))
+        net["dec1"] = TransposedConv2DLayer(net["resid9"], 64, 7, stride=2, nonlinearity=None)
+        net["norm3"] = InstanceNorm(net["dec1"])
+        net["lref3"] = NonlinearityLayer(net["norm3"], nonlinearity=LeakyRectify(0.2))
 
-            output = ConvLayer(expand_4_2, 3, 1, nonlinearity=None)
+        net["dec2"] = TransposedConv2DLayer(net["lref3"], 32, 6, stride=2, nonlinearity=None)
+        net["norm4"] = InstanceNorm(net["dec2"])
+        net["lref3"] = NonlinearityLayer(net["norm4"], nonlinearity=LeakyRectify(0.2))
 
-        self.net = net
+        net["out"] = Conv2DLayer(net["lref3"], 3, 5, pad="same", nonlinearity=T.tanh)
 
-        self.input_var = self.net.input_l.input_var
-        self.out_var = get_output(self.net.output)
+        return net
 
-        self.params = get_all_params(self.net.output, trainable=True)
+    def generate_showable(self, src_image):
+        pic = self.generate(src_image)
+        return pic.transpose(0, 2, 3, 1)
 
-        self.generate = theano.function([self.input_var], self.out_var, allow_input_downcast=True)
+
+class Discriminator:
+    def __init__(self, generator, real_inp_var=T.tensor4("real inp"), wasserstein=False):
+        self.inp_n_chan = generator.n_chan
+        self.inp_imsize = generator.filter_size
+        self.real_inp_var = real_inp_var
+
+        self.wasserstein = wasserstein
+
+        self.generator = generator
+        self.layers = self._build_network()
+
+        self.fake_out = get_output(self.layers["out"],
+                                   {self.layers["inp"] : self.generator.output_var})
+
+        self.real_out = get_output(self.layers["out"],
+                                   {self.layers["inp"] : real_inp_var})
+
+        self.params = get_all_params(self.layers["out"], trainable=True)
+
+    def _build_network(self):
+        net = OrderedDict()
+
+        net["inp"] = InputLayer([None, self.inp_n_chan] + self.inp_imsize)
+
+        net["conv1"] = Conv2DLayer(net["inp"], 64, 4, stride=2, pad="same", nonlinearity=LeakyRectify(0.2))
+        net["conv2"] = Conv2DLayer(net["conv1"], 128, 4, stride=2, pad="same", nonlinearity=LeakyRectify(0.2))
+        net["conv3"] = Conv2DLayer(net["conv2"], 256, 4, stride=2, pad="same", nonlinearity=LeakyRectify(0.2))
+        net["conv4"] = Conv2DLayer(net["conv3"], 256, 4, stride=2, pad="same", nonlinearity=LeakyRectify(0.2))
+        net["conv5"] = Conv2DLayer(net["conv4"], 256, 4, stride=2, pad="same", nonlinearity=LeakyRectify(0.2))
+
+        net["dense1"] = DenseLayer(net["conv5"], 512, nonlinearity=LeakyRectify(0.2))
+        net["dense2"] = DenseLayer(net["dense1"], 512, nonlinearity=LeakyRectify(0.2))
+
+        out_nonlin = None
+        if not self.wasserstein:
+            out_nonlin = T.nnet.sigmoid
+
+        net["out"] = DenseLayer(net["dense2"], 1, nonlinearity=out_nonlin)
