@@ -9,10 +9,20 @@ import theano
 import theano.tensor as T
 
 
-class Generator:
-    def __init__(self, n_chan=3, filter_size=(128, 128)):
+class ResGenerator:
+    """
+    An encoder-decoder generator, uses residual blocks on bottleneck
+    """
+    def __init__(self, n_chan=3, filter_size=(128, 128), input_var=None):
+        """
+        Builds A Generator instance
+        :param n_chan:
+        :param filter_size:
+        """
+
         self.n_chan = 3
         self.filter_size = filter_size
+        self.input_var = input_var
 
         self.layers = self._build_network()
 
@@ -27,7 +37,7 @@ class Generator:
     def _build_network(self):
         net = OrderedDict()
 
-        net["inp"] = InputLayer(tuple([None, self.n_chan]) + self.filter_size)
+        net["inp"] = InputLayer(tuple([None, self.n_chan]) + self.filter_size, self.input_var)
 
         net["conv1"] = Conv2DLayer(net["inp"], 32, 7, nonlinearity=LeakyRectify(0.2))
 
@@ -59,9 +69,21 @@ class Generator:
         pic = self.generate(src_image)
         return pic.transpose(0, 2, 3, 1)
 
+    def get_output(self, input_var):
+        return get_output(self.layers["out"], {self.layers["inp"] : input_var})
+
 
 class Discriminator:
+    """
+    A Convolutional Discriminator, can be wasserstein
+    """
     def __init__(self, generator, real_inp_var=T.tensor4("real inp"), wasserstein=False):
+        """
+        Build a Discriminator instance
+        :param generator: Generator to discriminate
+        :param real_inp_var: tensor4, real input
+        :param wasserstein: boolean, true - sigmoid output, false - None
+        """
         self.inp_n_chan = generator.n_chan
         self.inp_imsize = generator.filter_size
         self.real_inp_var = real_inp_var
@@ -80,15 +102,19 @@ class Discriminator:
         self.params = get_all_params(self.layers["out"], trainable=True)
 
     def _build_network(self):
+        """
+        Build a discriminator network
+        :return:
+        """
         net = OrderedDict()
 
-        net["inp"] = InputLayer([None, self.inp_n_chan] + self.inp_imsize)
+        net["inp"] = InputLayer([None, self.inp_n_chan] + list(self.inp_imsize))
 
-        net["conv1"] = Conv2DLayer(net["inp"], 64, 4, stride=2, pad="same", nonlinearity=LeakyRectify(0.2))
-        net["conv2"] = Conv2DLayer(net["conv1"], 128, 4, stride=2, pad="same", nonlinearity=LeakyRectify(0.2))
-        net["conv3"] = Conv2DLayer(net["conv2"], 256, 4, stride=2, pad="same", nonlinearity=LeakyRectify(0.2))
-        net["conv4"] = Conv2DLayer(net["conv3"], 256, 4, stride=2, pad="same", nonlinearity=LeakyRectify(0.2))
-        net["conv5"] = Conv2DLayer(net["conv4"], 256, 4, stride=2, pad="same", nonlinearity=LeakyRectify(0.2))
+        net["conv1"] = Conv2DLayer(net["inp"], 64, 5, stride=2, pad="same", nonlinearity=LeakyRectify(0.2))
+        net["conv2"] = Conv2DLayer(net["conv1"], 128, 5, stride=2, pad="same", nonlinearity=LeakyRectify(0.2))
+        net["conv3"] = Conv2DLayer(net["conv2"], 256, 5, stride=2, pad="same", nonlinearity=LeakyRectify(0.2))
+        net["conv4"] = Conv2DLayer(net["conv3"], 256, 5, stride=2, pad="same", nonlinearity=LeakyRectify(0.2))
+        net["conv5"] = Conv2DLayer(net["conv4"], 256, 5, stride=2, pad="same", nonlinearity=LeakyRectify(0.2))
 
         net["dense1"] = DenseLayer(net["conv5"], 512, nonlinearity=LeakyRectify(0.2))
         net["dense2"] = DenseLayer(net["dense1"], 512, nonlinearity=LeakyRectify(0.2))
@@ -98,3 +124,5 @@ class Discriminator:
             out_nonlin = T.nnet.sigmoid
 
         net["out"] = DenseLayer(net["dense2"], 1, nonlinearity=out_nonlin)
+        
+        return net
