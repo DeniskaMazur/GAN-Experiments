@@ -61,7 +61,7 @@ class ResGenerator:
         net["norm4"] = InstanceNorm(net["dec2"])
         net["lref3"] = NonlinearityLayer(net["norm4"], nonlinearity=LeakyRectify(0.2))
 
-        net["out"] = Conv2DLayer(net["lref3"], 3, 3, pad="same", nonlinearity=T.tanh)
+        net["out"] = Conv2DLayer(net["lref3"], 3, 7, pad="same", nonlinearity=T.tanh)
 
         return net
 

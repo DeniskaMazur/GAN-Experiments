@@ -12,4 +12,4 @@ def pics2array(path, pic_names, im_size=(128, 128)):
         
         X.append(pic)
         
-    return X
+    return np.array(X)
