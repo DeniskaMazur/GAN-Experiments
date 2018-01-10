@@ -1,6 +1,6 @@
 import theano.tensor as T
 
-from lasagne.layers import Layer, Conv2DLayer, NonlinearityLayer
+from lasagne.layers import Layer, Conv2DLayer, NonlinearityLayer, ElemwiseSumLayer
 from lasagne.nonlinearities import LeakyRectify
 
 
@@ -26,4 +26,4 @@ def ResidualBlock(input, filter_size):
     relu = NonlinearityLayer(norm, LeakyRectify(0.2))
     conv2 = Conv2DLayer(relu, input.output_shape[1], filter_size, pad="same", nonlinearity=None)
 
-    return conv2 + input
+    return ElemwiseSumLayer([input, conv2])
