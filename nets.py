@@ -53,15 +53,15 @@ class ResGenerator:
         for i in range(8):
             net["resid%d" % (i+2)] = ResidualBlock(net["resid%d" % (i+1)], 3)
 
-        net["dec1"] = TransposedConv2DLayer(net["resid9"], 64, 7, stride=2, nonlinearity=None)
+        net["dec1"] = TransposedConv2DLayer(net["resid9"], 64, 3, stride=2, nonlinearity=None)
         net["norm3"] = InstanceNorm(net["dec1"])
         net["lref3"] = NonlinearityLayer(net["norm3"], nonlinearity=LeakyRectify(0.2))
 
-        net["dec2"] = TransposedConv2DLayer(net["lref3"], 32, 6, stride=2, nonlinearity=None)
+        net["dec2"] = TransposedConv2DLayer(net["lref3"], 32, 4, stride=2, nonlinearity=None)
         net["norm4"] = InstanceNorm(net["dec2"])
         net["lref3"] = NonlinearityLayer(net["norm4"], nonlinearity=LeakyRectify(0.2))
 
-        net["out"] = Conv2DLayer(net["lref3"], 3, 5, pad="same", nonlinearity=T.tanh)
+        net["out"] = Conv2DLayer(net["lref3"], 3, 7, pad="same", nonlinearity=T.tanh)
 
         return net
 

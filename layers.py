@@ -26,4 +26,4 @@ def ResidualBlock(input, filter_size):
     relu = NonlinearityLayer(norm, LeakyRectify(0.2))
     conv2 = Conv2DLayer(relu, input.output_shape[1], filter_size, pad="same", nonlinearity=None)
 
-    return conv2
+    return conv2 + input
