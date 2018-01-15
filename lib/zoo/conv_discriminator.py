@@ -16,12 +16,12 @@ class Discriminator:
     def __init__(self, generator, real_inp_var=T.tensor4("real inp"), wasserstein=False):
         """
         Build a Discriminator instance
-        :param generator: Generator to discriminate
+        :param generator: Generator instance
         :param real_inp_var: tensor4, real input
         :param wasserstein: boolean, true - sigmoid output, false - None
         """
-        self.inp_n_chan = generator.n_chan
-        self.inp_imsize = generator.filter_size
+        self.n_input_channels = generator.n_input_channels
+        self.inp_dims = generator.output_dims
         self.real_inp_var = real_inp_var
 
         self.wasserstein = wasserstein
@@ -44,7 +44,7 @@ class Discriminator:
         """
         net = OrderedDict()
 
-        net["inp"] = InputLayer([None, self.inp_n_chan] + list(self.inp_imsize))
+        net["inp"] = InputLayer([None, self.n_input_channels] + list(self.inp_dims))
 
         net["conv1"] = Conv2DLayer(net["inp"], 64, 5, stride=2, pad="same", nonlinearity=LeakyRectify(0.2))
         net["conv2"] = Conv2DLayer(net["conv1"], 128, 5, stride=2, pad="same", nonlinearity=LeakyRectify(0.2))
