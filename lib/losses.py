@@ -29,6 +29,6 @@ def wasserstein_gradient_penalty_loss(real_input, gen_output, discriminator_outp
     gradients = T.grad(x_hat_score, x_hat)[0]
     grad_penalty = ((T.sqrt(T.sum(gradients**2)) - 0.01)**2).mean()
 
-    loss = real_score - gen_score + gp_lambd * grad_penalty
+    loss = gen_score - real_score + gp_lambd * grad_penalty
 
     return loss

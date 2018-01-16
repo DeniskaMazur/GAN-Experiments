@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from lasagne.layers import (InputLayer, ConcatLayer, Pool2DLayer, get_output,
+from lasagne.layers import (InputLayer, ConcatLayer, Pool2DLayer, get_output, get_all_params,
                             DropoutLayer, Deconv2DLayer, batch_norm)
 
 from lasagne.layers import Conv2DLayer as ConvLayer
@@ -28,8 +28,9 @@ class UnetGenerator:
         self.model = self._build_network()
         self.input_var = self.model["input"].input_var
         self.output_var = get_output(self.model["output"])
-        self.output_dims = self.model["output"].output_shape[2:]
+        self.output_shape = self.model["output"].output_shape
         self.generate = theano.function([self.input_var], self.output_var)
+        self.params = get_all_params(self.model["output"], trainable=True)
 
     def _build_network(self):
         net = OrderedDict()

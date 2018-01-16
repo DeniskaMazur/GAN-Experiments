@@ -20,8 +20,8 @@ class Discriminator:
         :param real_inp_var: tensor4, real input
         :param wasserstein: boolean, true - sigmoid output, false - None
         """
-        self.n_input_channels = generator.n_input_channels
-        self.inp_dims = generator.output_dims
+        self.n_input_channels = generator.output_shape[1]
+        self.inp_dims = generator.output_shape[2:]
         self.real_inp_var = real_inp_var
 
         self.wasserstein = wasserstein

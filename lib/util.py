@@ -7,8 +7,12 @@ def pics2array(path, pic_names, im_size=(128, 128)):
     
     for pic_name in pic_names:
         pic = ndimage.imread(path + pic_name)
-        pic = misc.imresize(pic, (im_size))
-        pic = pic.transpose(2, 0, 1)
+        
+        if im_size:
+            pic = misc.imresize(pic, (im_size))
+        
+        if pic.ndim == 3:
+            pic = pic.transpose(2, 0, 1)
         
         X.append(pic)
         
