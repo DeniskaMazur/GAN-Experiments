@@ -15,4 +15,4 @@ class BaseGenerator(object):
         Builds lasagne model
         :return: dictionary name: lasagne layer
         """
-        return OrderedDict()
+        pass

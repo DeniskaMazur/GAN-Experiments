@@ -27,15 +27,15 @@ class Discriminator:
         self.wasserstein = wasserstein
 
         self.generator = generator
-        self.layers = self._build_network()
+        self.model = self._build_network()
 
-        self.fake_out = get_output(self.layers["out"],
-                                   {self.layers["inp"] : self.generator.output_var})
+        self.fake_out = get_output(self.model["out"],
+                                   {self.model["inp"] : self.generator.output_var})
 
-        self.real_out = get_output(self.layers["out"],
-                                   {self.layers["inp"] : real_inp_var})
+        self.real_out = get_output(self.model["out"],
+                                   {self.model["inp"] : self.real_inp_var})
 
-        self.params = get_all_params(self.layers["out"], trainable=True)
+        self.params = get_all_params(self.model["out"], trainable=True)
 
     def _build_network(self):
         """
