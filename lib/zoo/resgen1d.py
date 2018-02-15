@@ -3,6 +3,7 @@ from lasagne.layers import (Layer, ElemwiseSumLayer, InputLayer,
                             NonlinearityLayer, Conv1DLayer)
 
 from ..layers import GatedConv1DLayer, InstanceNorm1D
+from ..layers import PixelShuffle1DLayer
 
 import theano.tensor as T
 
@@ -49,57 +50,28 @@ class Sound2SoundNet:
             gate3 = GatedConv1DLayer(norm2, self.n_base_filter*4)
 
             resid = gate3
-            for _ in range(7):
-                resid = ResidualBlock1D(resid, self.n_base_filter * 8, 3)
+            for _ in range(9):
+                resid = ResidualBlock(resid)
 
+            conv4 = Conv1DLayer(resid, self.n_base_filter*8, 5)
+            pixshuf1 = PixelShuffle1DLayer(conv4, 2)
+            gate4 = GatedConv1DLayer(pixshuf1, self.n_base_filter*8)
 
+            #conv5 = Conv1DLayer(gate4, self.n_base_filter*4, 5)
+            #pixshuf2 = PixelShuffle1DLayer(conv5, 2)
+            # gate = GatedConv1DLayer(pixshuf2, self)
 
         return net
 
-'''
-class ResidualBlock1D(Layer):
-    """
-    1 Dimensional Residual Layer
-    """
-    def __init__(self, incoming, num_filters, filter_size,
-                 norm_layer=InstanceNorm1D, nonlinearity=lasagne.nonlinearities.LeakyRectify(0.2), **kwargs):
-        """
-        :param incoming: the layer feeding into this layer, or the expected input shape.
-        :param num_filters: number of convolutional filters
-        :param filter_size: size of convolutional filters
-        :param norm_layer: normalization technique to use
-        """
-        super(ResidualBlock1D, self).__init__(incoming, **kwargs)
 
-        conv = Conv1DLayer(incoming, num_filters=num_filters, filter_size=filter_size, pad="same")
-        norm = norm_layer(conv)
-        nonlin = NonlinearityLayer(norm, nonlinearity)
+def ResidualBlock(incoming):
+    shit = Conv1DLayer(incoming, 1024, 3, pad="same")
+    shit = InstanceNorm1D(shit)
+    shit = GatedConv1DLayer(shit, 1024)
 
-        conv = Conv1DLayer(nonlin, num_filters=int(num_filters/2), filter_size=filter_size, pad="same")
-        norm = norm_layer(conv)
+    shit = Conv1DLayer(shit, 512, 3, pad="same")
+    shit = InstanceNorm1D(shit)
+    shit = GatedConv1DLayer(shit, 512)
 
-        sum = ElemwiseSumLayer([incoming, norm])
+    return ElemwiseSumLayer([incoming, shit])
 
-        self.get_output_for = sum.get_output_for
-        self.get_output_shape_for = sum.get_output_shape_for
-        self.get_params = sum.get_params
-'''
-
-
-class ResidualBlock1D(Layer):
-
-    def __init__(self, incoming, num_filters, filter_size=3, stride=1, num_layers=2):
-        print incoming.output_shape
-        super(ResidualBlock1D, self).__init__(incoming)
-
-        conv = incoming
-        if (num_filters != incoming.output_shape[1]) or (stride != 1):
-            incoming = Conv1DLayer(incoming, num_filters, filter_size=1, stride=stride, pad=0, nonlinearity=None, b=None)
-        for _ in range(num_layers):
-            conv = Conv1DLayer(conv, num_filters, filter_size, pad='same')
-
-        sum = ElemwiseSumLayer([conv, incoming])
-
-        self.get_output_shape_for = sum.get_output_shape_for
-        self.get_output_for = sum.get_output_for
-        self.get_params = sum.get_params
