@@ -43,7 +43,7 @@ class GatedConv1DLayer(Layer):
 
     H_{l+1} = (H_l * W_l + b_l) * sigmoid(H_l + V_l + c_l)
     """
-    def __init__(self, incoming, num_filters, filter_size=1, pad="same", nonlinearity=None, **kwargs):
+    def __init__(self, incoming, filter_size=1, pad="same", nonlinearity=None, **kwargs):
         """
         Creates a GatedConv1DLayer instance
         :param incoming: incoming layer
@@ -52,6 +52,8 @@ class GatedConv1DLayer(Layer):
         :param nonlinearity: activation function for h
         """
         super(GatedConv1DLayer, self).__init__(incoming, **kwargs)
+
+        num_filters = incoming.output_shape[1]
 
         h = Conv1DLayer(incoming, num_filters, filter_size,
                         pad=pad, nonlinearity=nonlinearity, **kwargs)

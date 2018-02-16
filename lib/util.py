@@ -4,7 +4,6 @@ import numpy as np
 
 def pics2array(path, pic_names, im_size=(128, 128)):
     X = list()
-    
     for pic_name in pic_names:
         pic = ndimage.imread(path + pic_name)
         

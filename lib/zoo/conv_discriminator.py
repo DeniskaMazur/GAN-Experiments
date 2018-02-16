@@ -5,7 +5,6 @@ from ..layers import *
 
 from collections import OrderedDict
 
-import theano
 import theano.tensor as T
 
 
@@ -62,3 +61,4 @@ class Discriminator:
         net["out"] = DenseLayer(net["dense2"], 1, nonlinearity=out_nonlin)
         
         return net
+        

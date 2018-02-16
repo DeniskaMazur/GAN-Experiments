@@ -1,6 +1,3 @@
-import theano.tensor as T
-
-
 def pixel_shuffle2d(X, upscale_factor):
     """
     Rearranges elements in a tensor of shape ``[*, C*r^2, H, W]`` to a
