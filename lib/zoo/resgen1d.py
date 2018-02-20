@@ -32,12 +32,14 @@ class Sound2SoundNet:
         self.norm_func = norm_func
 
         self.input_var = T.tensor3("input spectrogram")
-
+        
+        print("Sound2SoundNet: building net")
         self.layers = self._build_net()
         self.input_var = self.layers.inp.input_var
         self.output_var = get_output(self.layers.out)
         self.output_shape = self.layers.out.output_shape
-
+        
+        print("Sound2SoundNet: compilling generate function")
         self.generate = theano.function([self.input_var], self.output_var)
         self.params = get_all_params(self.layers.out, trainable=True)
 

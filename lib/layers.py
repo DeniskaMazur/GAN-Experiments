@@ -1,6 +1,6 @@
 import theano.tensor as T
 
-from lasagne.layers import Layer, Conv1DLayer, get_output
+from lasagne.layers import Layer, Conv1DLayer, Conv2DLayer, get_output
 
 from .pixshuff import pixel_shuffle1d
 
@@ -58,6 +58,38 @@ class GatedConv1DLayer(Layer):
         h = Conv1DLayer(incoming, num_filters, filter_size,
                         pad=pad, nonlinearity=nonlinearity, **kwargs)
         g = Conv1DLayer(incoming, num_filters, filter_size,
+                            pad=pad, nonlinearity=T.nnet.sigmoid, **kwargs)
+
+        self.h = get_output(h)
+        self.g = get_output(g)
+
+        self.get_output_shape_for = g.get_output_shape_for
+
+    def get_output_for(self, input, **kwargs):
+        return self.h * self.g
+    
+
+class GatedConv2DLayer(Layer):
+    """
+    Implementation of https://arxiv.org/pdf/1612.08083.pdf
+
+    H_{l+1} = (H_l * W_l + b_l) * sigmoid(H_l + V_l + c_l)
+    """
+    def __init__(self, incoming, filter_size=1, pad="same", nonlinearity=None, **kwargs):
+        """
+        Creates a GatedConv1DLayer instance
+        :param incoming: incoming layer
+        :param num_filters: int, number of conv filters
+        :param filter_size: int, size of conv filters
+        :param nonlinearity: activation function for h
+        """
+        super(GatedConv1DLayer, self).__init__(incoming, **kwargs)
+
+        num_filters = incoming.output_shape[1]
+
+        h = Conv2DLayer(incoming, num_filters, filter_size,
+                        pad=pad, nonlinearity=nonlinearity, **kwargs)
+        g = Conv2DLayer(incoming, num_filters, filter_size,
                             pad=pad, nonlinearity=T.nnet.sigmoid, **kwargs)
 
         self.h = get_output(h)
