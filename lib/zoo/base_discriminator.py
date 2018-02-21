@@ -34,4 +34,3 @@ class BaseDiscriminator(object):
             out = Layer(inp)
 
         return net
-        
