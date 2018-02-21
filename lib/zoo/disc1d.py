@@ -1,14 +1,29 @@
 import theano
 import theano.tensor as T
 
-from lasagne.layers import (InputLayer, Conv2DLayer, ReshapeLayer, DenseLayer)
+from lasagne.layers import (InputLayer, Conv2DLayer, ReshapeLayer, DenseLayer, get_output)
 
 from ..layers import GatedConv2DLayer, InstanceNorm1D
 
 
 class Discriminator1D:
+    """
+    A Discriminator for sound sequences, uses 2D Convolutions.
+    """
 
     def __init__(self, generator, real_input_var=T.tensor3, n_base_filter=128, norm_func=InstanceNorm1D, wasserstein=False):
+        """Creates a Discriminator1D instance
+        
+        Arguments:
+            generator -- Generator instance
+        
+        Keyword Arguments:
+            real_input_var theano.tensor.tensor3 -- Real input (default: {T})
+            n_base_filter int -- Base number of filters (default: {128})
+            norm_func lasagne.layers.Layer -- Normalization layer (default: {InstanceNorm1D})
+            wasserstein boolean -- Uses linear output if true, sigmoid if false (default: {False})
+        """
+
         self.n_input_channels = generator.output_shape[1]
         self.inp_dims = generator.output_shape[2:]
         self.n_base_filter = n_base_filter
@@ -18,7 +33,12 @@ class Discriminator1D:
         self.norm_func = norm_func
 
         self.generator = generator
-        #self.model = self._build_network()
+        self.layers = self._build_network()
+
+        self.real_out = get_output(self.layers.out,
+                                    {self.layers.inp: real_input_var})
+        self.fake_out = get_output(self.layers.out,
+                                    {self.layers.inp: self.generator.output_var})
 
     def _build_network(self):
         class net:
@@ -46,6 +66,6 @@ class Discriminator1D:
             if not self.wasserstein:
                 nonlinearity = T.nnet.sigmoid
 
-            #out = DenseLayer(gate4, 1, nonlinearity=nonlinearity)
+            out = DenseLayer(gate4, 1, nonlinearity=nonlinearity)
             
         return net

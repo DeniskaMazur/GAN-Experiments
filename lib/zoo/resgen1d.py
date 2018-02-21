@@ -1,51 +1,39 @@
+from .base_generator import BaseGenerator
+
+from lasagne.nonlinearities import LeakyRectify
 from lasagne.layers import (ElemwiseSumLayer, InputLayer, NonlinearityLayer,
                              Conv1DLayer, get_output, get_all_params)
 
 from ..layers import GatedConv1DLayer, InstanceNorm1D
 from ..layers import PixelShuffle1DLayer
 
-import theano
-import theano.tensor as T
 
+class Sound2SoundNet(BaseGenerator):
 
-class Sound2SoundNet:
-    """
-    A sound to sound generator
-    """
-
-    def __init__(self, seq_len, n_chan=1025, n_base_filter=128, n_residual=7,
-                 nonlinearity=None, norm_func=InstanceNorm1D):
+    def __init__(self, inp_dims, n_base_filter=128, n_residual=7, nonlinearity=LeakyRectify(0.2), norm_func=InstanceNorm1D):
+        """Creates a ResidualGenerator1D Instance
+        
+        Arguments:
+            inp_dims list of int -- input shape
+            n_residual int -- number of residual blocks
+        
+        Keyword Arguments:
+            n_base_filter int -- number of base filters (default: {128})
+            nonlinearity lasagne.nonlineatities -- convolution nonlinearity (default: {LeakyRectify})
         """
-        :param seq_len: int, length of the sequence
-        :param n_chan: int, number of channels
-        :param n_base_filter: int, the base bumber of conv filters
-        :param n_residual: int, number of residual blocks
-        :param nonlinearity: nonlinearity for the generator
-        :param norm_func: normalization function
-        """
-        self.seq_len = seq_len
-        self.n_input_chan = n_chan
-        self.n_base_filter = n_base_filter
-        self.n_residual = n_residual
-
+        
+        # hyperparams
+        self.n_base_filter = n_base_filter        
+        self.n_residual = 7
         self.nonlinearity = nonlinearity
         self.norm_func = norm_func
 
-        self.input_var = T.tensor3("input spectrogram")
-        
-        print("Sound2SoundNet: building net")
-        self.layers = self._build_net()
-        self.input_var = self.layers.inp.input_var
-        self.output_var = get_output(self.layers.out)
-        self.output_shape = self.layers.out.output_shape
-        
-        print("Sound2SoundNet: compilling generate function")
-        self.generate = theano.function([self.input_var], self.output_var)
-        self.params = get_all_params(self.layers.out, trainable=True)
+        super(Sound2SoundNet, self).__init__(inp_dims)
 
     def _build_net(self):
         class net:
-            inp = InputLayer((None, self.n_input_chan, self.seq_len,), input_var=self.input_var)
+            inp = InputLayer(self.inp_dims)
+            
             conv1 = Conv1DLayer(inp, self.n_base_filter, 15, nonlinearity=self.nonlinearity, pad="same")
             gate1 = GatedConv1DLayer(conv1)
 
@@ -71,7 +59,7 @@ class Sound2SoundNet:
             norm4 = self.norm_func(pixshuf2)
             gate5 = GatedConv1DLayer(norm4)
 
-            out = Conv1DLayer(gate5, self.n_input_chan, 15, pad="same")
+            out = Conv1DLayer(gate5, self.inp_dims[1], 15, pad="same")
 
         return net
 
@@ -88,4 +76,3 @@ def ResidualBlock(incoming):
     gate2 = GatedConv1DLayer(norm2)
 
     return ElemwiseSumLayer([incoming, gate2])
-

@@ -83,7 +83,7 @@ class GatedConv2DLayer(Layer):
         :param filter_size: int, size of conv filters
         :param nonlinearity: activation function for h
         """
-        super(GatedConv1DLayer, self).__init__(incoming, **kwargs)
+        super(GatedConv2DLayer, self).__init__(incoming, **kwargs)
 
         num_filters = incoming.output_shape[1]
 
