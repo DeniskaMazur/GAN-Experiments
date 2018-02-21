@@ -10,7 +10,7 @@ from ..layers import PixelShuffle1DLayer
 
 class Sound2SoundNet(BaseGenerator):
 
-    def __init__(self, inp_dims, n_base_filter=128, n_residual=7, nonlinearity=LeakyRectify(0.2), norm_func=InstanceNorm1D):
+    def __init__(self, inp_dims, n_base_filter=128, n_residual=7, nonlinearity=LeakyRectify(0.2), norm_func=InstanceNorm1D, **kwargs):
         """Creates a ResidualGenerator1D Instance
         
         Arguments:
@@ -28,7 +28,7 @@ class Sound2SoundNet(BaseGenerator):
         self.nonlinearity = nonlinearity
         self.norm_func = norm_func
 
-        super(Sound2SoundNet, self).__init__(inp_dims)
+        super(Sound2SoundNet, self).__init__(inp_dims, **kwargs)
 
     def _build_net(self):
         class net:
