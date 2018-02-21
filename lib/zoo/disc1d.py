@@ -1,18 +1,13 @@
-import theano
+from .base_discriminator import BaseDiscriminator
 import theano.tensor as T
-
 from lasagne.layers import (InputLayer, Conv2DLayer, ReshapeLayer, DenseLayer, get_output)
-
 from ..layers import GatedConv2DLayer, InstanceNorm1D
 
 
-class Discriminator1D:
-    """
-    A Discriminator for sound sequences, uses 2D Convolutions.
-    """
-
-    def __init__(self, generator, real_input_var=T.tensor3, n_base_filter=128, norm_func=InstanceNorm1D, wasserstein=False):
-        """Creates a Discriminator1D instance
+class Discriminator1D(BaseDiscriminator):
+    
+     def __init__(self, generator, real_input_var=T.tensor3(), n_base_filter=128, norm_func=InstanceNorm1D, wasserstein=False):
+         """Creates a Discriminator1D instance
         
         Arguments:
             generator -- Generator instance
@@ -23,26 +18,15 @@ class Discriminator1D:
             norm_func lasagne.layers.Layer -- Normalization layer (default: {InstanceNorm1D})
             wasserstein boolean -- Uses linear output if true, sigmoid if false (default: {False})
         """
-
-        self.n_input_channels = generator.output_shape[1]
-        self.inp_dims = generator.output_shape[2:]
         self.n_base_filter = n_base_filter
-        self.wasserstein = wasserstein
-
-        self.real_inp_var = real_input_var
         self.norm_func = norm_func
+        self.wasserstein = wasserstein
+        
+        super(Discriminator1D, self).__init__(generator, real_input_var)
 
-        self.generator = generator
-        self.layers = self._build_network()
-
-        self.real_out = get_output(self.layers.out,
-                                    {self.layers.inp: real_input_var})
-        self.fake_out = get_output(self.layers.out,
-                                    {self.layers.inp: self.generator.output_var})
-
-    def _build_network(self):
+    def _build_net():
         class net:
-            inp = InputLayer([None, self.n_input_channels] + list(self.inp_dims))
+            inp = InputLayer(self.input_shape)
 
             # [None, 1, channels, time]
             resh = ReshapeLayer(inp, [-1, 1] + list(self.inp_dims))
@@ -67,5 +51,5 @@ class Discriminator1D:
                 nonlinearity = T.nnet.sigmoid
 
             out = DenseLayer(gate4, 1, nonlinearity=nonlinearity)
-            
+        
         return net

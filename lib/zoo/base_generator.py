@@ -1,4 +1,4 @@
-from lasagne.layers import InputLayer, Layer, get_output
+from lasagne.layers import InputLayer, Layer, get_output, get_all_params
 
 import theano
 
@@ -24,6 +24,9 @@ class BaseGenerator(object):
         
         # generation function
         self.generate = theano.function([self.input_var], self.output_var)
+
+        # weights
+        self.params = get_all_params(self.layers.out, trainable=True)
 
     def _build_net(self):
         """Defines network
